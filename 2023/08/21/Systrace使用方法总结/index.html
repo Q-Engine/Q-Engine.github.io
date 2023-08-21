@@ -1,0 +1,135 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="author" content="Q-Engine,Q-Engine@gmail.com"><title>Systrace使用方法总结 · Hexo</title><meta name="description" content="Systrace概述systrace是Android4.1后推出的性能数据采集和分析工具。systrace的功能包括跟踪系统的I&amp;#x2F;O操作、内核工作队列、CPU负载以及Android各个子系统（如 SurfaceFlinger&amp;#x2F;SystemServer&amp;#x2F;Kernel&amp;#x"><meta name="keywords" content="Q-Engine,Vue,HTML,CSS,Android,Linux"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="renderer" content="webkit"><link rel="short icon" href="/images/favicon.png" type="image/x-icon"><link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/blog_basic.css"><link rel="stylesheet" href="/css/font-awesome.min.css"><link rel="alternate" type="application/atom+xml" title="ATOM 1.0" href="/atom.xml"><meta name="generator" content="Hexo 6.3.0"></head><body><div class="sidebar animated fadeInDown"><div class="logo-title"><div class="title"><img src="/images/logo@2x.png" style="width:127px;"><h3 title=""><a href="/">Hexo</a></h3><div class="description"><p>Mars,here we come!!</p></div></div></div><ul class="social-links"></ul></div><div class="main"><div class="page-top animated fadeInDown"><div class="nav"><li><a href="/">Home</a></li><li><a href="/about">Sobre</a></li><li><a href="/archives">Archivo</a></li><li><a href="/links">Enlaces</a></li></div><div class="information"><div class="back_btn"><li><a class="fa fa-chevron-left" onclick="window.history.go(-1)"> </a></li></div><div class="avatar"><img src="/images/headpic.png"></div></div></div><div class="autopagerize_page_element"><div class="content"><div class="post-page"><div class="post animated fadeInDown"><div class="post-title"><h3><a>Systrace使用方法总结</a></h3></div><div class="post-content"><h2 id="Systrace概述"><a href="#Systrace概述" class="headerlink" title="Systrace概述"></a>Systrace概述</h2><p>systrace是Android4.1后推出的性能数据采集和分析工具。systrace的功能包括跟踪系统的I&#x2F;O操作、内核工作队列、CPU负载以及Android各个子系统（如 SurfaceFlinger&#x2F;SystemServer&#x2F;Kernel&#x2F;Input&#x2F;Display 等 Framework 部分关键模块、服务，View系统等）的运行状况等。<br>在 Android 平台中，它主要由3部分组成：</p>
+<ul>
+<li>内核部分：Systrace 利用了 Linux Kernel 中的 ftrace 功能。所以，如果要使用 Systrace 的话，必须开启 kernel 中和 ftrace 相关的模块。</li>
+<li>数据采集部分：Android 定义了一个 Trace 类。应用程序可利用该类把统计信息输出给ftrace。同时，Android 还有一个 atrace 程序，它可以从 ftrace 中读取统计信息然后交给数据分析工具来处理。</li>
+<li>数据分析工具：Android提供一个systrace.py（ python 脚本文件，位于 Android SDK目录&#x2F;platform-tools&#x2F;systrace 中，其内部将调用 atrace 程序）用来配置数据采集的方式（如采集数据的标签、输出文件名等）和收集 ftrace 统计数据并生成一个结果网页文件供用户查看。 从本质上说，Systrace 是对 Linux Kernel中 ftrace 的封装。应用进程需要利用 Android 提供的 Trace 类来使用 Systrace。</li>
+</ul>
+<h2 id="Systrace使用方法"><a href="#Systrace使用方法" class="headerlink" title="Systrace使用方法"></a>Systrace使用方法</h2><p>抓取systrace使用adb+systrace.py来完成。使用前需要保证：1.系统已安装python；2.系统已安装adb；3.安卓手机开启了开发者模式+允许USB debug。</p>
+<h3 id="自定义systrace抓取函数运行数据"><a href="#自定义systrace抓取函数运行数据" class="headerlink" title="自定义systrace抓取函数运行数据"></a>自定义systrace抓取函数运行数据</h3><p><strong>app层</strong>(在源代码中加入以下语句)</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">import android.os.Trace;</span><br><span class="line">Trace.beginSection(String sectionName);</span><br><span class="line">    // .. 其他代码</span><br><span class="line">    // ...</span><br><span class="line">    // .. 结束处</span><br><span class="line">Trace.EndSection();</span><br></pre></td></tr></table></figure>
+
+<p>此时需要通过python systrace.py –app&#x3D;sectionName 指定apk，或者通过ddms选择指定apk，抓取systrace分析。<br><strong>Java framework层</strong>(在源代码中加入以下语句)</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">import android.os.Trace;</span><br><span class="line">Trace.traceBegin(long traceTag, String methodName)</span><br><span class="line">Trace.traceEnd(long traceTag)</span><br></pre></td></tr></table></figure>
+
+<p>在代码中必须成对出现，一般将traceEnd放入到finally语句块，还必须在同一个线程。不需指定，直接抓取systrace分析即可。<br><strong>Native framework层</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">#include &lt;cutils/trace.h&gt;</span><br><span class="line">ATRACE_CALL();</span><br></pre></td></tr></table></figure>
+
+<p>最好要在函数开头声明定义。不需指定，直接抓取systrace分析即可。</p>
+<h3 id="通过Android-Studio集成开发工具使用"><a href="#通过Android-Studio集成开发工具使用" class="headerlink" title="通过Android Studio集成开发工具使用"></a>通过Android Studio集成开发工具使用</h3><p>在Android Studio切换到DDMS，点击devices，点击Systrace按钮即可打开使用界面。这个具有图形界面，点击选项框可以选择需要抓取的trace的选项。</p>
+<h3 id="通过命令行工具使用"><a href="#通过命令行工具使用" class="headerlink" title="通过命令行工具使用"></a>通过命令行工具使用</h3><ol>
+<li>使用数据项将电脑与手机相连</li>
+<li>在手机端为需要分析的问题作准备:比如要分析App的冷启动过程，那就先把App进程杀掉，切换到Launcher中该App图标所在页面，随时准备点击图标启动进程；假设要分析某个Activity的卡顿情况，那就先在手机上进入到上一个Activity，随时准备点按钮切换到待分析的Activity中。</li>
+<li>在PC端 <code>cd</code> 进入systrace所在目录，如：<code>cd $ANDROID_HOME/platform-tools/systrace</code></li>
+<li>执行systrace命令，如：<code>./systrace.py -t 10 sched gfx view wm am app webview -a 相应软件包名</code></li>
+<li>经过相应时间后就会有trace数据生成在当前目录，默认是 <code>trace.html</code></li>
+<li>使用<code>edge://tracing</code>打开trace分析工具，点击右上角load加载相关抓取到的trace文件</li>
+</ol>
+<h2 id="Systrace命令"><a href="#Systrace命令" class="headerlink" title="Systrace命令"></a>Systrace命令</h2><p>systrace.py命令的一般用法是：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">systrace.py [options] [category1 [category2 ...]]</span><br></pre></td></tr></table></figure>
+
+<p>options指为trace进行基本设置：category指定所要抓取的trace的种类。<br>[option]常用参数如下：(也可用键值对的形式进行设置)</p>
+<ul>
+<li>-o FILE：指定trace数据文件的输出路径，如果不指定就是当前目录的<code>trace.html</code>。</li>
+<li>-t N：用来指定Trace运行的时间，取决于你需要分析过程的时间；在需要的时候尽可能缩小时间；当然，绝对不要把时间设的太短导致在手机上没操作完Trace就跑完了，这样会出现<code>Did not finish</code> 的标签，分析数据就基本无效了。</li>
+<li>-a <package_name>：可以开启指定包名App中自定义Trace Label的Trace功能。用逗号分隔可指定多个App。另外，如果在代码中使用了<code>Trace.beginSection(&quot;tag名称&quot;)</code>, <code>Trace.endSection</code>；默认情况下这些代码是不会生效的，只有指定App后才能在抓取的trace中看到这个自定义的信息！</li>
+<li>-b N：设置buffer大小(单位kB)，用于限制收集trace存储的总大小。</li>
+<li>-l：这个用来列出你分析的那个手机系统支持的Trace模块；也就是上面命令中 <code>[category1]</code>能使用的部分；不同版本的系统能支持的模块是不同的，一般来说，高版本的支持的模块更多。</li>
+<li>-k &lt; KFUNCS &gt;：用于指定需要追踪的kernel函数，用逗号分隔可以指定多个函数。</li>
+<li>–from-file&#x3D;&lt; FROM_FILE &gt;：用于将test.trace文件转化为systrace的.html文件。</li>
+<li>-e &lt; device-serial &gt;：指定已连接的特定设备（由对应的设备序列号标识指定）进行跟踪。<br>[category]可用选项如下：</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line">didi@ubuntu: ~/Downloads/platform-tools/systrace$ ./systrace.py -l</span><br><span class="line">         gfx - Graphics  #Graphic系统的相关信息，包括SurfaceFlinger，VSYNC消息，Texture，RenderThread等；分析卡顿依赖这个参数</span><br><span class="line">       input - Input</span><br><span class="line">        view - View System  #View绘制系统的相关信息，比如onMeasure，onLayout等；对分析卡顿比较有帮助。</span><br><span class="line">     webview - WebView</span><br><span class="line">          wm - Window Manager</span><br><span class="line">          am - Activity Manager  #ActivityManager调用的相关信息；用来分析Activity的启动过程比较有效</span><br><span class="line">          sm - Sync Manager</span><br><span class="line">       audio - Audio</span><br><span class="line">       video - Video</span><br><span class="line">      camera - Camera</span><br><span class="line">         hal - Hardware Modules</span><br><span class="line">         res - Resource Loading</span><br><span class="line">      dalvik - Dalvik VM     #虚拟机相关信息，比如GC停顿等</span><br><span class="line">          rs - RenderScript</span><br><span class="line">      bionic - Bionic C Library</span><br><span class="line">       power - Power Management</span><br><span class="line">          pm - Package Manager</span><br><span class="line">          ss - System Server</span><br><span class="line">    database - Database</span><br><span class="line">     network - Network</span><br><span class="line">         adb - ADB</span><br><span class="line">    vibrator - Vibrator</span><br><span class="line">        aidl - AIDL calls</span><br><span class="line">       nnapi - NNAPI</span><br><span class="line">         rro - Runtime Resource Overlay</span><br><span class="line">         pdx - PDX services</span><br><span class="line">       sched - CPU Scheduling	#CPU调度信息。包括线程在每个时间段的运行状态、被调度情况，比如锁信息</span><br><span class="line">        freq - CPU Frequency   #CPU各个core的频率变化</span><br><span class="line">        idle - CPU Idle  #CPU idle C-state</span><br><span class="line">        disk - Disk I/O</span><br><span class="line">        sync - Synchronization</span><br><span class="line">  memreclaim - Kernel Memory Reclaim</span><br><span class="line">  binder_driver - Binder Kernel driver  #Binder驱动的相关信息。如果怀疑是Binder IPC的问题，可以抓取打开这个参数进行分析</span><br><span class="line">  binder_lock - Binder global lock trace</span><br><span class="line">   pagecache - Page cache</span><br><span class="line">   core_services #SystemServer中系统核心Service的相关信息，分析特定问题用。</span><br></pre></td></tr></table></figure>
+
+<h2 id="浏览器trace工具使用方法"><a href="#浏览器trace工具使用方法" class="headerlink" title="浏览器trace工具使用方法"></a>浏览器trace工具使用方法</h2><p>systrace文件在浏览器打开界面中，横坐标是以时间为单位，纵坐标是以进程-线程的方式来划分，同一进程的线程为一组放在一起，可收缩&#x2F;展开。如下图所示：</p>
+<p><img src="/../images/systrace%E4%BD%BF%E7%94%A8%E6%96%B9%E6%B3%95%E6%80%BB%E7%BB%93/systrace%E8%BE%93%E5%87%BA%E7%95%8C%E9%9D%A2.jpg"></p>
+<p>相关快捷按键总结如下表：</p>
+<table>
+<thead>
+<tr>
+<th>导航操作</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>w</td>
+<td>放大，[+shift]速度更快</td>
+</tr>
+<tr>
+<td>s</td>
+<td>缩小，[+shift]速度更快</td>
+</tr>
+<tr>
+<td>a</td>
+<td>左移，[+shift]速度更快</td>
+</tr>
+<tr>
+<td>d</td>
+<td>右移，[+shift]速度更快</td>
+</tr>
+<tr>
+<td>f</td>
+<td>放大当前选定区域</td>
+</tr>
+<tr>
+<td>m</td>
+<td>标记当前选定区域</td>
+</tr>
+<tr>
+<td>v</td>
+<td>高亮VSync</td>
+</tr>
+<tr>
+<td>g</td>
+<td>切换是否显示60hz的网格线</td>
+</tr>
+<tr>
+<td>0</td>
+<td>恢复trace到初始态，这里是数字0而非字母o</td>
+</tr>
+<tr>
+<td>h</td>
+<td>切换是否显示详情</td>
+</tr>
+<tr>
+<td>&#x2F;</td>
+<td>搜索关键字</td>
+</tr>
+<tr>
+<td>enter</td>
+<td>显示搜索结果，可通过← →定位搜索结果</td>
+</tr>
+<tr>
+<td>&#96;</td>
+<td>显示&#x2F;隐藏脚本控制台</td>
+</tr>
+<tr>
+<td>?</td>
+<td>显示帮助功能</td>
+</tr>
+<tr>
+<td>数字键1、2、3、4</td>
+<td>对应鼠标的四种操作模式</td>
+</tr>
+<tr>
+<td>每个条形堆上方的多色线条表示特定线程随时间变化的一组状态。每段线条可以包含以下颜色之一：</td>
+<td></td>
+</tr>
+</tbody></table>
+<ul>
+<li>绿色：正在运行<br>线程正在完成与某个进程相关的工作或正在响应中断。</li>
+<li>蓝色：可运行<br>线程可以运行但目前未进行调度。</li>
+<li>白色：休眠<br>线程没有可执行的任务，可能是因为线程在遇到斥锁定时被阻止。</li>
+<li>橙色：不可中断的休眠<br>线程在遇到 I&#x2F;O 操作时被阻止或正在等待磁盘操作完成。</li>
+<li>紫色：可中断的休眠<br>线程在遇到另一项内核操作（通常是内存管理）时被阻止。</li>
+</ul>
+<p>注意：在Systrace报告中，你可以点击该线条以确定该线程在给定时间由哪个CPU控制。</p>
+<h2 id="注意事项"><a href="#注意事项" class="headerlink" title="注意事项"></a>注意事项</h2><ol>
+<li>配置抓取systrace的时间，通常设置5秒，并在5秒内重现问题，时间太短会导致问题重现时没有被抓到，时间太长会导致Java Heap不够而无法保存，因此在能抓到问题点的情况下，时间越小越好。</li>
+<li>Buffer Size是存储systrace的size，同样的，太小会导致信息丢失，时间太长会导致Java Heap不够而无法保存，建议20480约为20MB。</li>
+<li>如果有自己在应用程序中加入自己的systrace log:Trace.beginSection(“newInstance”); Trace.endSection();那么必须使用<code>-a</code>指定这个应用对应的进程名字，否则新加的systrace log不会被抓到。</li>
+<li>在每个app进程，都有一个Frames行，正常情况以绿色的圆点表示。当圆点颜色为黄色或者红色时，意味着这一帧超过16.6ms（即发现丢帧），这时需要通过放大那一帧进一步分析问题。对于Android 5.0(API level 21)或者更高的设备，该问题主要聚焦在UI Thread和Render Thread这两个线程当中。</li>
+<li>我们可以在任意自己感兴趣的地方添加自定义的Label；一般来说，分析过程就是，如果怀疑哪里有问题，就在那那个函数加上Label，运行一遍抓一个Trace，看看自己的猜测对不对；如果猜测正确，进一步加Label缩小范围，定位到具体的自定义函数，函数最终调用到系统内部，那就开启系统相关模块的Trace，继续定位；如果猜测错误，那就转移目标，一步步缩小范围，直至问题收敛。</li>
+<li>还可以离线抓取Systrace(先不插数据线，抓取到atrace数据后再转化为systrace数据文件)，按以下步骤进行：</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">adb root &amp;&amp; adb remount</span><br><span class="line"># 输入以下指令开始后台抓取systrace，此时可断开usb连接线去复现问题</span><br><span class="line">adb shell &quot;atrace -z -b 40000 gfx input view wm am camera hal res&quot;</span><br><span class="line"># 复现问题后，重连usb线输入指令，确认atrace进程是否结束抓取并退出：</span><br><span class="line">adb shell ps -A | grep atrace</span><br></pre></td></tr></table></figure>
+</div><div class="post-footer"><div class="meta"><div class="info"><i class="fa fa-sun-o"></i><span class="date">2023-08-21</span><i class="fa fa-tag"></i><a class="tag" href="/tags/trace/" title="trace">trace </a></div></div></div></div><div class="share"><div class="evernote"><a class="fa fa-bookmark" href="javascript:(function(){EN_CLIP_HOST='http://www.evernote.com';try{var%20x=document.createElement('SCRIPT');x.type='text/javascript';x.src=EN_CLIP_HOST+'/public/bookmarkClipper.js?'+(new%20Date().getTime()/100000);document.getElementsByTagName('head')[0].appendChild(x);}catch(e){location.href=EN_CLIP_HOST+'/clip.action?url='+encodeURIComponent(location.href)+'&amp;title='+encodeURIComponent(document.title);}})();" ref="nofollow" target="_blank"></a></div><div class="weibo"><a class="fa fa-weibo" href="javascript:void((function(s,d,e){try{}catch(e){}var f='http://service.weibo.com/share/share.php?',u=d.location.href,p=['url=',e(u),'&amp;title=',e(d.title),'&amp;appkey=2924220432'].join('');function a(){if(!window.open([f,p].join(''),'mb',['toolbar=0,status=0,resizable=1,width=620,height=450,left=',(s.width-620)/2,',top=',(s.height-450)/2].join('')))u.href=[f,p].join('');};if(/Firefox/.test(navigator.userAgent)){setTimeout(a,0)}else{a()}})(screen,document,encodeURIComponent));"></a></div><div class="twitter"><a class="fa fa-twitter" target="_blank" rel="noopener" href="http://twitter.com/home?status=,http://example.com/2023/08/21/Systrace使用方法总结/,Hexo,Systrace使用方法总结,;"></a></div></div><div class="pagination"><ul class="clearfix"><li class="pre pagbuttons"><a class="btn" role="navigation" href="/2023/08/21/perfetto%E4%BD%BF%E7%94%A8%E6%96%B9%E6%B3%95%E6%80%BB%E7%BB%93/" title="perfetto使用方法总结">Post anterior</a></li><li class="next pagbuttons"><a class="btn" role="navigation" href="/2023/08/21/%E8%87%AA%E5%AE%9A%E4%B9%89View%E5%AD%A6%E4%B9%A0%E6%80%BB%E7%BB%93/" title="自定义View学习总结">Post siguiente</a></li></ul></div></div></div></div></div><script src="/js/jquery.js"></script><script src="/js/jquery-migrate-1.2.1.min.js"></script><script src="/js/jquery.appear.js"></script></body></html>

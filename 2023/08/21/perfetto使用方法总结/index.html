@@ -1,0 +1,59 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="author" content="Q-Engine,Q-Engine@gmail.com"><title>perfetto使用方法总结 · Hexo</title><meta name="description" content="抓取pefetto-trace方法在手机上抓取perfetto即之前总结的《使用手机抓取trace方法总结》文档。可直接输入以下代码直接打开界面：
+1adb shell am start com.android.traceur/com.android.traceur.MainActivity
+
+Pe"><meta name="keywords" content="Q-Engine,Vue,HTML,CSS,Android,Linux"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="renderer" content="webkit"><link rel="short icon" href="/images/favicon.png" type="image/x-icon"><link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/blog_basic.css"><link rel="stylesheet" href="/css/font-awesome.min.css"><link rel="alternate" type="application/atom+xml" title="ATOM 1.0" href="/atom.xml"><meta name="generator" content="Hexo 6.3.0"></head><body><div class="sidebar animated fadeInDown"><div class="logo-title"><div class="title"><img src="/images/logo@2x.png" style="width:127px;"><h3 title=""><a href="/">Hexo</a></h3><div class="description"><p>Mars,here we come!!</p></div></div></div><ul class="social-links"></ul></div><div class="main"><div class="page-top animated fadeInDown"><div class="nav"><li><a href="/">Home</a></li><li><a href="/about">Sobre</a></li><li><a href="/archives">Archivo</a></li><li><a href="/links">Enlaces</a></li></div><div class="information"><div class="back_btn"><li><a class="fa fa-chevron-left" onclick="window.history.go(-1)"> </a></li></div><div class="avatar"><img src="/images/headpic.png"></div></div></div><div class="autopagerize_page_element"><div class="content"><div class="post-page"><div class="post animated fadeInDown"><div class="post-title"><h3><a>perfetto使用方法总结</a></h3></div><div class="post-content"><h2 id="抓取pefetto-trace方法"><a href="#抓取pefetto-trace方法" class="headerlink" title="抓取pefetto-trace方法"></a>抓取pefetto-trace方法</h2><p>在手机上抓取perfetto即之前总结的《使用手机抓取trace方法总结》文档。可直接输入以下代码直接打开界面：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">adb shell am start com.android.traceur/com.android.traceur.MainActivity</span><br></pre></td></tr></table></figure>
+
+<p>Perfetto 是基于 Android 的系统追踪服务， 这个配置在 Android11(R) 之后默认打开。通过以下指令查看手机上traced 和 traced_probes这两个进程是否运行：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">1adb shell &quot;ps -ef | grep -E &quot;traced|traced_probes&quot; | grep -v grep&quot;</span><br></pre></td></tr></table></figure>
+
+<p>但是在非Pixel phones手机上的 Android 9 (P) 或者 10 (Q) ，那么需要执行如下命令才会在手机上开启 traced 和 traced_probes这两个进程。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">adb shell setprop persist.traced.enable 1</span><br></pre></td></tr></table></figure>
+
+<h3 id="使用ADB直接抓取trace："><a href="#使用ADB直接抓取trace：" class="headerlink" title="使用ADB直接抓取trace："></a>使用ADB直接抓取trace：</h3><ol>
+<li>电脑上已安装ADB并能够成功连接到手机</li>
+<li>查看手机路径：cd &#x2F;system&#x2F;bin&#x2F; 文件夹下是否具有perfetto文件</li>
+<li>执行以下命令开始抓取trace：<code>adb shell perfetto -o /data/misc/perfetto-traces/trace_file.perfetto-trace -t 20s sched freq idle am wm gfx view binder_driver hal dalvik camera input res memory</code></li>
+<li>通过 adb shell perfetto 的方式抓取 trace 是需要我们手动执行 ctrl + c 的方式结束我们的抓取操作</li>
+<li>抓取的文件被保存在了 <code>/data/misc/perfetto-traces/trace_file.perfetto-trace </code>中，可通过 adb pull 的方式把这个文件拉到在电脑里</li>
+</ol>
+<h3 id="配置config抓取trace"><a href="#配置config抓取trace" class="headerlink" title="配置config抓取trace"></a>配置config抓取trace</h3><ol>
+<li>电脑上已安装ADB并能够成功连接到手机</li>
+<li>新建一个命名为<code>config.pbtx</code>的配置文件，输入配置内容并保存</li>
+<li>将这个文件 push 到手机目录下：<code>adb push config.pbtx /data/local/tmp/config.pbtx</code></li>
+<li>执行命令开始抓取：<code>adb shell &#39;cat /data/local/tmp/config.pbtx | perfetto --txt -c - -o /data/misc/perfetto-traces/trace.perfetto-trace&#39;</code></li>
+<li>通过 adb pull 的方式把这个文件拉到在电脑里</li>
+</ol>
+<h3 id="工具生成配置信息抓取trace"><a href="#工具生成配置信息抓取trace" class="headerlink" title="工具生成配置信息抓取trace"></a>工具生成配置信息抓取trace</h3><ol>
+<li>电脑上已安装ADB并能够成功连接到手机</li>
+<li>在Perfetto UI上配置想要抓取的信息，并复制它生成的对应的指令。如下图所示：<br><img src="/../images/perfetto%E4%BD%BF%E7%94%A8%E6%96%B9%E6%B3%95%E6%80%BB%E7%BB%93/PerfettoUI%E8%87%AA%E5%8A%A8%E7%94%9F%E6%88%90%E6%8C%87%E4%BB%A4.jpg"></li>
+<li>将复制的指令直接粘贴到终端抓取trace。例如下图所示：<br><img src="/../images/perfetto%E4%BD%BF%E7%94%A8%E6%96%B9%E6%B3%95%E6%80%BB%E7%BB%93/PerfettoUI%E5%A4%8D%E5%88%B6%E6%8C%87%E4%BB%A4.jpg"></li>
+<li>通过 adb pull 的方式把这个文件拉到在电脑里</li>
+</ol>
+<h3 id="网页Perfetto-UI直接抓取指令"><a href="#网页Perfetto-UI直接抓取指令" class="headerlink" title="网页Perfetto UI直接抓取指令"></a>网页Perfetto UI直接抓取指令</h3><ol>
+<li><p>电脑上已安装ADB并能够成功连接到手机</p>
+</li>
+<li><p>打开Perfetto UI网页并确认网页是否识别到连接的手机设备</p>
+</li>
+<li><p>如果需要配置抓取的规则，可以通过下面的配置页面进行设置，比如抓取时长，buffer 大小等。</p>
+<p>![](..&#x2F;images&#x2F;perfetto使用方法总结&#x2F;Perfetto UI直接抓取trace.jpg)</p>
+</li>
+<li><p>点击右侧的 Record new trace 即可开始抓取</p>
+</li>
+</ol>
+<h2 id="perfetto要点记录"><a href="#perfetto要点记录" class="headerlink" title="perfetto要点记录"></a>perfetto要点记录</h2><ol>
+<li>使用Perfetto UI记录、查看和处理trace数据，支持流行的trace格式文件：TraceEvent JSON，Android systrace，ftrace文本</li>
+<li>Perfetto UI可以将Perfetto-trace文件转化为systrace等其它trace文件</li>
+<li>Perfetto UI在浏览器本地运行，不将trace上传到服务器</li>
+<li>可以在线抓取长时间的 trace，可以长达一个小时，另外抓取的文件size也可以达到GB级别，这样就可以在后台开启，让它一直抓取trace了，特别适用于那种复现概率很低，又比较严重的性能问题。Perfetto整体框架图如下所示：<br><img src="/../images/perfetto%E4%BD%BF%E7%94%A8%E6%96%B9%E6%B3%95%E6%80%BB%E7%BB%93/Perfetto%E6%95%B4%E4%BD%93%E6%A1%86%E6%9E%B6%E5%9B%BE.png"></li>
+<li>Perfetto具有很好的可扩展性，它除了提供标准的 tracepoints 之外，例如CPU调度信息，内存信息等，还可以通过 atrace HAL 层扩展，在 Android P当中，Google新增加了一个 atrace HAL 层，atrace 进程可以调用这个HAL的接口来获取当前的扩展信息，相关代码可见 Google 提交，这样如果需要扩展 tracepoints 的话，就可以按照 graphic 的示例添加即可</li>
+<li>Perfetto本身是一个框架，关于它的架构和模块的详细介绍，可以参考它的 doc网站，它的源码可以参考 Android Source Tree 的 &#x2F;external&#x2F;perfetto 目录，里面有很多的tools和脚本，可以拿来直接使用。doc网站:<a target="_blank" rel="noopener" href="https://docs.perfetto.dev/#/?id=perfetto-performance-instrumentation-and-tracing">https://docs.perfetto.dev/#/?id=perfetto-performance-instrumentation-and-tracing</a></li>
+</ol>
+<h2 id="使用要点"><a href="#使用要点" class="headerlink" title="使用要点"></a>使用要点</h2><ol>
+<li>点击”钉子”图标可将要分析的线程都置顶</li>
+<li>Perfetto UI页面顶部有个搜索框，搜索结果会将线程标黄，对应的函数会框起来。如下图所示：<br><img src="/%22E:%5CFiles%5CPictures%5CSavaOth%5C%E6%80%A7%E8%83%BDtrace%5CPerfettoUI%E6%90%9C%E7%B4%A2%E6%A1%86%E7%A4%BA%E4%BE%8B.jpg%22" alt="PerfettoUI搜索框示例"></li>
+<li>用鼠标框住一些线程后会在下方的信息栏显示线程的具体信息，此时可以点击线程名右边的框框将这个线程也选择上，此时这个新选择的线程的信息也会添加到下方的信息栏框内。此时可以对比各线程的信息</li>
+<li>关注的线程可用收藏号(就是线程名字后的星号)进行标记，便于上下翻动时快速找到</li>
+<li>Perfetto查看runnable的唤醒方法和systrace不一样，查看一个线程是由哪个线程唤醒的方法：<br><img src="/%22E:%5CFiles%5CPictures%5CSavaOth%5C%E6%80%A7%E8%83%BDtrace%5CperfettoUI%E6%9F%A5%E7%9C%8B%E7%BA%BF%E7%A8%8B%E6%98%AF%E7%94%B1%E5%93%AA%E4%B8%AA%E7%BA%BF%E7%A8%8B%E5%94%A4%E9%86%92%E6%96%B9%E6%B3%95.jpg%22" alt="perfettoUI查看线程是由哪个线程唤醒方法"></li>
+</ol>
+</div><div class="post-footer"><div class="meta"><div class="info"><i class="fa fa-sun-o"></i><span class="date">2023-08-21</span><i class="fa fa-tag"></i><a class="tag" href="/tags/trace/" title="trace">trace </a></div></div></div></div><div class="share"><div class="evernote"><a class="fa fa-bookmark" href="javascript:(function(){EN_CLIP_HOST='http://www.evernote.com';try{var%20x=document.createElement('SCRIPT');x.type='text/javascript';x.src=EN_CLIP_HOST+'/public/bookmarkClipper.js?'+(new%20Date().getTime()/100000);document.getElementsByTagName('head')[0].appendChild(x);}catch(e){location.href=EN_CLIP_HOST+'/clip.action?url='+encodeURIComponent(location.href)+'&amp;title='+encodeURIComponent(document.title);}})();" ref="nofollow" target="_blank"></a></div><div class="weibo"><a class="fa fa-weibo" href="javascript:void((function(s,d,e){try{}catch(e){}var f='http://service.weibo.com/share/share.php?',u=d.location.href,p=['url=',e(u),'&amp;title=',e(d.title),'&amp;appkey=2924220432'].join('');function a(){if(!window.open([f,p].join(''),'mb',['toolbar=0,status=0,resizable=1,width=620,height=450,left=',(s.width-620)/2,',top=',(s.height-450)/2].join('')))u.href=[f,p].join('');};if(/Firefox/.test(navigator.userAgent)){setTimeout(a,0)}else{a()}})(screen,document,encodeURIComponent));"></a></div><div class="twitter"><a class="fa fa-twitter" target="_blank" rel="noopener" href="http://twitter.com/home?status=,http://example.com/2023/08/21/perfetto使用方法总结/,Hexo,perfetto使用方法总结,;"></a></div></div><div class="pagination"><ul class="clearfix"><li class="next pagbuttons"><a class="btn" role="navigation" href="/2023/08/21/Systrace%E4%BD%BF%E7%94%A8%E6%96%B9%E6%B3%95%E6%80%BB%E7%BB%93/" title="Systrace使用方法总结">Post siguiente</a></li></ul></div></div></div></div></div><script src="/js/jquery.js"></script><script src="/js/jquery-migrate-1.2.1.min.js"></script><script src="/js/jquery.appear.js"></script></body></html>
